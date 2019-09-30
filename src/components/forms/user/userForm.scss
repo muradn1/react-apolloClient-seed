@@ -1,0 +1,22 @@
+.children-header {
+  display: flex;
+  width: 100%;
+
+  .label {
+    padding: 0 3px;
+  }
+
+  .horizontal-line {
+    width: 50%;
+    border-bottom: 1px solid black;
+  }
+
+  .add-icon{
+      opacity: 0.5;
+
+      &:hover{
+        opacity: 1;
+        cursor: pointer;
+      }
+  }
+}

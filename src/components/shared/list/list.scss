@@ -1,0 +1,23 @@
+.list {
+  padding-right: 18px;
+  display: flex;
+
+  .rows {
+    width: 1000px;
+  }
+
+  .filter {
+    width: 275px;
+    height: auto;
+    position: absolute;
+    left: 30px;
+
+    .image {
+      width: 100%;
+
+      img {
+        width: 100%;
+      }
+    }
+  }
+}

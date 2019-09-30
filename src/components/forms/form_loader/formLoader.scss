@@ -1,0 +1,39 @@
+.form-loader {
+  position: fixed;
+  left: 40%;
+  top: 7%;
+  z-index: 10;
+  width: 500px;
+  height: 650px;
+  background-color: white;
+  border: 1px solid black;
+  border-radius: 5px;
+
+  .header{
+    height: 30px;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    padding: 0px 1px;
+
+    .close-icon:hover {
+      cursor: pointer;
+    }
+
+    .my-menu-item{
+      width: 100px;
+      background-color: aqua;
+    }
+  }
+
+  .my-form{
+    padding: 0px 6px
+  }
+
+ 
+
+  .save-button {
+    position: absolute;
+    bottom: 7px;
+    left: 7px;
+  }
+}

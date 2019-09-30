@@ -1,0 +1,18 @@
+.row{
+    width: 100%;
+    margin-bottom: 10px;
+
+    .col:not(:last-child){
+        border-left: 1px #dee2e6 solid;
+    }
+    .field-name{
+        text-align: center;
+    }
+    .field-value{
+        text-align: center;
+    }
+}
+
+.row:hover{
+    cursor: pointer;
+}

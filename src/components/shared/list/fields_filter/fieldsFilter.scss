@@ -1,0 +1,12 @@
+.fields-filter{
+    display: flex;
+    direction: rtl;
+
+    .main-label{
+        text-align: center;
+    }
+
+    .fields{
+        flex-direction: row;
+    }
+}
