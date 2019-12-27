@@ -1,0 +1,26 @@
+#csv-generator-container {
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    flex-flow: row-reverse;
+}
+
+#types-selector {
+    width: 15%;
+    margin: 2%;
+}
+
+#choose-type-btn {
+    width: 20%;
+}
+
+.snackbar-container {
+
+    display: flex;
+    justify-content: center;
+
+    .error-snackbar {
+        width: 35%;
+        justify-content: center;
+    }
+}
