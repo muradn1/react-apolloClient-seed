@@ -20,7 +20,7 @@ export default function Uploader({ onFileRead }) {
     const [errorOccurred, setErrorOccurred] = useState(false);
     const [fileLoaded, setFileLoaded] = useState(false);
 
-    const readAsBinary = ([file]) => {
+    const readFromSingleFile = ([file]) => {
         if (file) {
             fileReader.readAsBinaryString(file);
         }
@@ -45,7 +45,7 @@ export default function Uploader({ onFileRead }) {
         setErrorOccurred(false);
     };
 
-    const getMessage = () => {
+    const getSnackbarMessage  = () => {
         if (fileLoaded) {
             return <span id="success-message">
                 <CheckCircleIcon className={"icon"} />Excel file uploaded
@@ -67,13 +67,14 @@ export default function Uploader({ onFileRead }) {
             <div>
                 <input className="upload-csv-btn" type='file' id="csv-input"
                     accept=".csv, .xlsx" name="file"
-                    onChange={({ target }) => readAsBinary(target.files)} />
+                    onChange={({ target }) => readFromSingleFile(target.files)} />
                 <label htmlFor="csv-input">
                     <Button variant="contained" color="primary" component="span">
                         Upload excel file<AddIcon />
                     </Button>
                 </label>
             </div>
+            
             <Snackbar
                 anchorOrigin={{
                     vertical: 'bottom',
@@ -83,7 +84,7 @@ export default function Uploader({ onFileRead }) {
                 autoHideDuration={2000}
                 onClose={onSnackbarClosed}>
                 <SnackbarContent className={fileLoaded ? "success-snackbar" : "error-snackbar"}
-                    message={getMessage()}
+                    message={getSnackbarMessage ()}
                 />
             </Snackbar>
         </div>

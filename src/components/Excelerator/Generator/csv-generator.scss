@@ -1,16 +1,16 @@
-#csv-generator-container {
+.csv-generator-container {
     display: flex;
     justify-content: flex-start;
     align-items: center;
     flex-flow: row-reverse;
 }
 
-#types-selector {
+.types-selector {
     width: 15%;
     margin: 2%;
 }
 
-#choose-type-btn {
+.choose-type-btn {
     width: 20%;
 }
 

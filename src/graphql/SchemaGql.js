@@ -8,6 +8,9 @@ export const TYPE_FRAGMENT = gql`
             name
             type {
               kind
+              ofType {
+                kind
+              }
             }
           }
         fields {

@@ -3,21 +3,22 @@ import XLSX from 'xlsx';
 export default function Excelerator() {
 
     function getCsvHeader(fields) {
-        const objectNames = getObjectNames(fields);
+        const listNamesInGqlObject = getListNamesOfGqlObject(fields);
 
-        const objects = fields.filter(({ name }) => objectNames.includes(name));
-        const nonObjects = fields.filter(({ name }) => !objectNames.includes(name));
+        const listObjects = fields.filter(({ name }) => listNamesInGqlObject.includes(name));
+        const nonListObjects = fields.filter(({ name }) => !listNamesInGqlObject.includes(name));
 
-        const objectCsvData = objects.map(({ name }) => {
+        // Create 3 columns for each list object
+        const objectCsvData = listObjects.map(({ name }) => {
             return [1, 2, 3].map(i => ({ [`${name}${i}`]: {} }));
         });
 
-        const nonObjectCsvData = nonObjects.map(({ name }) => ({ [name]: {} }));
+        const nonObjectCsvData = nonListObjects.map(({ name }) => ({ [name]: {} }));
 
         return [...nonObjectCsvData, ...objectCsvData.flat()];
     }
 
-    function downloadCsv(data, fileName) {
+    function createCsv(fileName, data) {
         const newWorkbook = XLSX.utils.book_new();
 
         const worksheet = XLSX.utils.json_to_sheet(data);
@@ -26,25 +27,26 @@ export default function Excelerator() {
         XLSX.writeFile(newWorkbook, `${fileName}.csv`);
     }
 
-    function uploadCsv(data) {
-        const workbook = XLSX.read(data, {
+    function loadCsv(csv) {
+        const workbook = XLSX.read(csv, {
             type: 'binary'
         });
 
-        const rows = workbook.SheetNames.map(name => XLSX.utils.sheet_to_json(workbook.Sheets[name]))
+        const firstSheetName = workbook.SheetNames[0];
+        const csvRows = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheetName]);
 
-        return rows;
+        return csvRows;
     }
 
-    function getObjectNames(gqlObjectFields) {
+    function getListNamesOfGqlObject(gqlObjectFields) {
         return gqlObjectFields
-            .filter(({ type }) => type.ofType && type.ofType.kind === 'OBJECT')
+            .filter(({ type }) => type.kind === "LIST")
             .map(({ name }) => name);
     }
 
     return {
         getCsvHeader,
-        downloadCsv,
-        uploadCsv
+        downloadCsv: createCsv,
+        uploadCsv: loadCsv
     };
 }

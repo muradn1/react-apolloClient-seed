@@ -2,7 +2,7 @@ import React from 'react';
 
 import PropTypes from 'prop-types';
 
-import { useMutation } from '@apollo/react-hooks';
+import { useMutation, useLazyQuery } from '@apollo/react-hooks';
 
 import { Button } from '@material-ui/core';
 import SaveIcon from '@material-ui/icons/Save';
@@ -17,6 +17,8 @@ Saver.propTypes = {
 
 export default function Saver({ typeToCreate, createQuery, getAllQuery, data, updateQuery }) {
 
+    const [getAll] = useLazyQuery(getAllQuery);
+
     const [updateMutation] = useMutation(updateQuery,
         {
             onCompleted() { console.info(`${typeToCreate} updated succesfully`) }
@@ -24,17 +26,6 @@ export default function Saver({ typeToCreate, createQuery, getAllQuery, data, up
 
     const [createMutation] = useMutation(createQuery, {
         onCompleted: () => { console.info(`${typeToCreate} created succesfully`) },
-        update: (cache, { data: { createUser } }) => {
-            try {
-                const { allUsers } = cache.readQuery({ query: getAllQuery });
-                cache.writeQuery({
-                    query: getAllQuery,
-                    data: { allUsers: allUsers.concat([createUser]) }
-                })
-            } catch {
-                console.error(`There is no entry in cache for that item`);
-            }
-        }
     });
 
     const save = (dataFromCsv) => {
@@ -45,6 +36,8 @@ export default function Saver({ typeToCreate, createQuery, getAllQuery, data, up
                 createMutation({ variables: { userInput: user } });
             }
         });
+
+        getAll();
     }
 
     return (
