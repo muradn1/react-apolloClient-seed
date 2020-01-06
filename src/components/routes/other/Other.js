@@ -1,25 +1,43 @@
 import React, { useState } from 'react'
 import "./other.scss"
 import Uploader from '../../Excelerator/Uploader/Uploader'
-import CsvGenerator from '../../Excelerator/Generator/CsvGenerator'
+import ExcelGenerator from '../../Excelerator/Generator/ExcelGenerator'
 import { CREATE_USER, GET_All_USERS, UPDATE_USER } from '../../../graphql/UserGql';
 import Saver from '../../Excelerator/Saver/Saver';
+import { gql } from 'apollo-boost';
 
+const GET_ALL_USERS_QUERY = gql`
+  {
+    allUsers {
+      id
+      firstName
+      lastName
+      email
+      avatar
+      children {
+        id
+        name
+        age
+      }
+    }
+  }
+`;
 
 export default function Other() {
 
-    const [dataFromCsv, setDataFromCsv] = useState([]);
+    const [dataFromExcel, setDataFromExcel] = useState([]);
 
     const onFileRead = (data) => {
-        setDataFromCsv(data);
+        setDataFromExcel(data);
     }
 
     return (
         <div>
-            <p className="others">Csv</p>
             <Uploader onFileRead={onFileRead} />
-            <CsvGenerator />
-            <Saver typeToCreate="user" data={dataFromCsv}
+            <ExcelGenerator
+                getAllDataQuery={GET_ALL_USERS_QUERY}
+                typeName="User" />
+            <Saver typeToCreate="user" data={dataFromExcel}
                 createQuery={CREATE_USER}
                 getAllQuery={GET_All_USERS}
                 updateQuery={UPDATE_USER} />

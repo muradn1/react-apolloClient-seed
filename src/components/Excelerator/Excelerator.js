@@ -26,15 +26,31 @@ export function createCsv(fileName, data) {
     XLSX.writeFile(newWorkbook, `${fileName}.csv`);
 }
 
-export function loadDataFromCsv(csv) {
-    const workbook = XLSX.read(csv, {
+export function loadDataFromExcelFile(excel) {
+    const workbook = XLSX.read(excel, {
         type: 'binary'
     });
 
-    const firstSheetName = workbook.SheetNames[0];
-    const csvRows = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheetName]);
+    const [mainType, ...listsNames] = workbook.SheetNames;
 
-    return csvRows;
+    const data = XLSX.utils.sheet_to_json(workbook.Sheets[mainType]);
+    addListsToMainTypeObject(data, listsNames, workbook);
+    
+    return data;
+}
+
+function addListsToMainTypeObject(mainData, listNames, workbook) {
+    listNames.forEach(name => {
+        const listData = XLSX.utils.sheet_to_json(workbook.Sheets[name]);
+        const groupByParentIdData = _.groupBy(listData, x => x.parentId);
+
+        _.keys(groupByParentIdData).forEach(parentId => {
+            const parent = mainData.find(entry => entry.id ===parentId);
+            if(parent) {
+                parent[name] = groupByParentIdData[parentId]
+            }
+        });
+    });
 }
 
 function getListNamesOfGqlObject(gqlObjectFields) {
@@ -43,7 +59,7 @@ function getListNamesOfGqlObject(gqlObjectFields) {
         .map(({ name }) => name);
 }
 
-export function downloadCsvWithData(fileName, data, typeName) {
+export function downloadExcelWithData(fileName, data, typeName) {
     const newWorkbook = XLSX.utils.book_new();
     const entry = data[0];
     const listNames = _.keys(entry).filter(key => Array.isArray(entry[key]));
@@ -51,7 +67,13 @@ export function downloadCsvWithData(fileName, data, typeName) {
     const lists = {};
 
     listNames.forEach(name => {
-        lists[name] = data.flatMap(entry => entry[name]);
+        lists[name] = data.flatMap(entry => {
+            const currentList = entry[name];
+
+            currentList.forEach(listItem => listItem.parentId = entry.id);
+
+            return currentList;
+        });
     });
 
     addSheetToWorkbook(typeName, newWorkbook, data);
@@ -61,17 +83,6 @@ export function downloadCsvWithData(fileName, data, typeName) {
     });
 
     XLSX.writeFile(newWorkbook, `${fileName}.xlsx`);
-}
-
-export function loadCsv(csv) {
-    const workbook = XLSX.read(csv, {
-        type: "binary"
-    });
-
-    const firstSheetName = workbook.SheetNames[0];
-    const csvRows = XLSX.utils.sheet_to_json(workbook.Sheets[firstSheetName]);
-
-    return csvRows;
 }
 
 function addSheetToWorkbook(sheetName, workbook, data) {

@@ -11,9 +11,9 @@ import { Button, Snackbar, SnackbarContent } from '@material-ui/core';
 import AddIcon from '@material-ui/icons/Add';
 import ErrorIcon from '@material-ui/icons/Error';
 import CheckCircleIcon from '@material-ui/icons/CheckCircle';
-import CsvFileReader from '../CsvFileReader/CsvFileReader';
+import ExcelFileReader from '../ExcelFileReader/ExcelFileReader';
 
-const csvFileReader = new CsvFileReader();
+const excelFileReader = new ExcelFileReader();
 
 Uploader.propTypes = {
     onFileRead: PropTypes.func.isRequired
@@ -24,12 +24,12 @@ export default function Uploader({ onFileRead }) {
     const [errorOccurred, setErrorOccurred] = useState(false);
     const [fileLoaded, setFileLoaded] = useState(false);
 
-    csvFileReader.onCsvFileLoad(({ rows }) => {
+    excelFileReader.onExcelFileLoad(({ rows }) => {
         onFileRead(rows);
         setFileLoaded(true);
     });
 
-    csvFileReader.onCsvFileError = (e) => {
+    excelFileReader.onExcelFileError = (e) => {
         setErrorOccurred(true);
         console.error(e);
     }
@@ -59,10 +59,10 @@ export default function Uploader({ onFileRead }) {
     return (
         <div>
             <div>
-                <input className="upload-csv-btn" type='file' id="csv-input"
+                <input className="upload-excel-btn" type='file'
                     accept=".csv, .xlsx" name="file"
-                    onChange={({ target }) => { csvFileReader.readCsv(target.files[0]) }} />
-                <label htmlFor="csv-input">
+                    onChange={({ target }) => { excelFileReader.readExcel(target.files[0]) }} />
+                <label htmlFor="excel-input">
                     <Button variant="contained" color="primary" component="span">
                         Upload excel file<AddIcon />
                     </Button>

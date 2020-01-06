@@ -1,8 +1,18 @@
-.csv-generator-container {
+.excel-generator-container {
     display: flex;
     justify-content: flex-start;
     align-items: center;
     flex-flow: row-reverse;
+
+    .generate-excel-btn {
+        width: 30%;
+        cursor: pointer;
+    }
+
+    .success-snackbar {
+        background-color: #4caf50 !important;
+        direction: ltr;
+      }
 }
 
 .types-selector {
@@ -10,12 +20,7 @@
     margin: 2%;
 }
 
-.choose-type-btn {
-    width: 20%;
-}
-
 .snackbar-container {
-
     display: flex;
     justify-content: center;
 

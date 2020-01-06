@@ -25,8 +25,8 @@ export default function Saver({ typeToCreate, createQuery, getAllQuery, data, up
         onCompleted: () => { console.info(`${typeToCreate} created succesfully`) },
     });
 
-    const save = (dataFromCsv) => {
-        dataFromCsv.forEach(user => {
+    const save = (dataFromExcel) => {
+        dataFromExcel.forEach(user => {
             if (user.id) {
                 updateMutation({ variables: { userInput: user } });
             } else {

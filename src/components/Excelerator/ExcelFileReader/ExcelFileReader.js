@@ -1,27 +1,27 @@
-import { loadDataFromCsv } from "../Excelerator";
+import { loadDataFromExcelFile } from "../Excelerator";
 
-export default class CsvFileReader {
+export default class ExcelFileReader {
 
     constructor() {
         this.fileReader = new FileReader();
     }
 
-    readCsv(file) {
+    readExcel(file) {
         if(file) {
             this.fileReader.readAsBinaryString(file);
         }
     }
 
-    onCsvFileLoad(callback) {
+    onExcelFileLoad(callback) {
         this.fileReader.onload = (e) => {
             const data = e.target.result;
-            const rows = loadDataFromCsv(data);
+            const rows = loadDataFromExcelFile(data);
 
             callback({rows, e});
         };
     }
 
-    onCsvFileError(callback) {
+    onExcelFileError(callback) {
         this.fileReader.onerror = (e) => {
             this.fileReader.abort();
             callback(e);
