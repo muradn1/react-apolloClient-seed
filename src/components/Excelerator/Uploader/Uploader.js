@@ -55,7 +55,6 @@ export default function Uploader({ onFileRead }) {
         }
     }
 
-
     return (
         <div>
             <div>
