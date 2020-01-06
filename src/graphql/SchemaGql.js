@@ -10,6 +10,9 @@ export const TYPE_FRAGMENT = gql`
               kind
               ofType {
                 kind
+                inputFields {
+                    name
+                }
               }
             }
           }

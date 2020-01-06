@@ -18,12 +18,9 @@ Saver.propTypes = {
 export default function Saver({ typeToCreate, createQuery, getAllQuery, data, updateQuery }) {
 
     const [getAll] = useLazyQuery(getAllQuery);
-
-    const [updateMutation] = useMutation(updateQuery,
-        {
-            onCompleted() { console.info(`${typeToCreate} updated succesfully`) }
-        });
-
+    const [updateMutation] = useMutation(updateQuery, {
+        onCompleted() { console.info(`${typeToCreate} updated succesfully`) }
+    });
     const [createMutation] = useMutation(createQuery, {
         onCompleted: () => { console.info(`${typeToCreate} created succesfully`) },
     });

@@ -5,10 +5,9 @@ import { FormControl, InputLabel, Select, MenuItem, Button, SnackbarContent } fr
 
 import './csv-generator.scss';
 import ProgressBar from '../../Progress/ProgressBar';
-import Excelerator from '../Excelerator';
 import ErrorIcon from '@material-ui/icons/Error';
+import { getCsvHeader, createCsv } from '../Excelerator';
 
-const excelerator = new Excelerator();
 const unwantedGqlTypes = ['Query', 'Mutation', "Subscription"];
 
 export default function CsvGenerator() {
@@ -37,9 +36,9 @@ export default function CsvGenerator() {
         if (typeToGenerate && typeToGenerate.__type) {
             const { name, inputFields } = typeToGenerate.__type;
 
-            const header = excelerator.getCsvHeader(inputFields);
+            const header = getCsvHeader(inputFields);
 
-            excelerator.downloadCsv(name, header);
+            createCsv(name, header);
         }
     };
 
@@ -48,7 +47,7 @@ export default function CsvGenerator() {
             <SnackbarContent
                 className="error-snackbar"
                 message={
-                    <span id="client-snackbar">
+                    <span className="client-snackbar">
                         <ErrorIcon /> Unable to generate excel file, error loading GQL types
                     </span>
                 }
@@ -65,9 +64,9 @@ export default function CsvGenerator() {
             <div className="csv-generator-container">
                 <div className="types-selector">
                     <FormControl style={{ minWidth: '180px' }}>
-                        <InputLabel id="gql-type">Type</InputLabel>
+                        <InputLabel className="gql-type">Type</InputLabel>
                         <Select
-                            id="gql-type-select"
+                            className="gql-type-select"
                             value={selectedInputObject}
                             onChange={({ target }) => setSelectedInputObject(target.value)}
                         >
@@ -75,8 +74,8 @@ export default function CsvGenerator() {
                         </Select>
                     </FormControl>
                 </div>
-                
-                <div id="choose-type-btn">
+
+                <div className="choose-type-btn">
                     <Button onClick={generateExcelFile} variant="outlined" color="primary">
                         Generate excel file
                     </Button>
