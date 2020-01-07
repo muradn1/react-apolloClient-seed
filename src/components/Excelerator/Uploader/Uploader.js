@@ -55,10 +55,11 @@ export default function Uploader({ onFileRead }) {
         }
     }
 
+
     return (
         <div>
             <div>
-                <input className="upload-excel-btn" type='file'
+                <input className="upload-excel-btn" type='file' id="excel-input"
                     accept=".csv, .xlsx" name="file"
                     onChange={({ target }) => { excelFileReader.readExcel(target.files[0]) }} />
                 <label htmlFor="excel-input">

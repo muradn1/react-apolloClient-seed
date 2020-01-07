@@ -79,7 +79,19 @@ export class User {
         this.lastName = lastName;
         this.email = email;
         this.avatar = avatar;
-        this.children = children;
+        this.children = children.map(child => new Child(child));
 
+    }
+}
+
+export class Child {
+    id;
+    name;
+    age;
+
+    constructor({ id, age, name }) {
+        this.id = id;
+        this.age = age;
+        this.name = name;
     }
 }

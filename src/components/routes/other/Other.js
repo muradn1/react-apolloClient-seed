@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import "./other.scss"
 import Uploader from '../../Excelerator/Uploader/Uploader'
 import ExcelGenerator from '../../Excelerator/Generator/ExcelGenerator'
-import { CREATE_USER, GET_All_USERS, UPDATE_USER } from '../../../graphql/UserGql';
+import { CREATE_USER, GET_All_USERS, UPDATE_USER, User } from '../../../graphql/UserGql';
 import Saver from '../../Excelerator/Saver/Saver';
 import { gql } from 'apollo-boost';
 
@@ -28,7 +28,7 @@ export default function Other() {
     const [dataFromExcel, setDataFromExcel] = useState([]);
 
     const onFileRead = (data) => {
-        setDataFromExcel(data);
+        setDataFromExcel(data.map(entry => new User(entry)));
     }
 
     return (
