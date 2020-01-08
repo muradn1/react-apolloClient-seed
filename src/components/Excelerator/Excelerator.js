@@ -1,31 +1,26 @@
 import XLSX from "xlsx";
 import _ from "lodash";
 
-export function getCsvHeader(fields) {
-    const listNamesInGqlObject = getListNamesOfGqlObject(fields);
-
-    const listObjects = fields.filter(({ name }) => listNamesInGqlObject.includes(name));
-    const nonListObjects = fields.filter(({ name }) => !listNamesInGqlObject.includes(name));
-
-    // Create 3 columns for each list object
-    const objectCsvData = listObjects.map(({ name }) => {
-        return [1, 2, 3].map(i => ({ [`${name}${i}`]: {} }));
-    });
-
-    const nonObjectCsvData = nonListObjects.map(({ name }) => ({ [name]: {} }));
-
-    return [...nonObjectCsvData, ...objectCsvData.flat()];
-}
-
-export function createCsv(fileName, data) {
-    const newWorkbook = XLSX.utils.book_new();
-
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    XLSX.utils.book_append_sheet(newWorkbook, worksheet);
-
-    XLSX.writeFile(newWorkbook, `${fileName}.csv`);
-}
-
+/**
+ * 
+ * @param {*} excel Binary representation of an excel file. Could be acquired using js FileReader
+ * @returns Representation of the data in the excel file. 
+ * For example: data = [{
+            id: 1,
+            firstName: "Jane",
+            lastName: "Doe",
+            children:[{id:3, name:"Bob"},{id:4, name:"John"}],
+            certifications: ["java","js"]
+        },
+        {
+            id:2,
+            firstName: "John",
+            lastName: "Doe",
+            children:[{id:5, name:"Bob"},{id:6, name:"John"}],
+            certifications: ["java","js"]
+        }
+    ]
+ */
 export function loadDataFromExcelFile(excel) {
     const workbook = XLSX.read(excel, {
         type: 'binary'
@@ -34,58 +29,105 @@ export function loadDataFromExcelFile(excel) {
     const [mainType, ...listsNames] = workbook.SheetNames;
 
     const data = XLSX.utils.sheet_to_json(workbook.Sheets[mainType]);
-    addListsToMainTypeObject(data, listsNames, workbook);
-    
+
+    if (listsNames) {
+        addListsToMainTypeObject(data, listsNames, workbook);
+    }
+
     return data;
 }
 
+/**
+ * 
+ * @param {*} mainData The main type. For example: "User"
+ * @param {*} listNames The names of the lists connected to the main type. For example: ["Children", "Certifications"]
+ * @param {*} workbook The workbook in which the data is saved. First sheet is the main type and the rest are the lists
+ * @description Addsd the list data to the main type
+ */
 function addListsToMainTypeObject(mainData, listNames, workbook) {
     listNames.forEach(name => {
+        /**
+         * listData = {
+         *  "children": [{id:5, name:"Bob", parentId: 1},{id:6, name:"John", parentId: 1}],
+         *  "certifications": ["java","js"]
+         * }
+         */
         const listData = XLSX.utils.sheet_to_json(workbook.Sheets[name]);
-        const groupByParentIdData = _.groupBy(listData, x => x.parentId);
+        const dataGroupedByParentId = _.groupBy(listData, x => x.parentId);
 
-        _.keys(groupByParentIdData).forEach(parentId => {
-            const parent = mainData.find(entry => entry.id ===parentId);
-            if(parent) {
-                parent[name] = groupByParentIdData[parentId]
+        _.keys(dataGroupedByParentId).forEach(parentId => {
+            const parent = mainData.find(entry => entry.id === parentId);
+
+            if (!parent) {
+                throw new Error(`Parent with id ${parentId} cannot be null`);
             }
+
+            parent[name] = dataGroupedByParentId[parentId]
         });
     });
 }
 
-function getListNamesOfGqlObject(gqlObjectFields) {
-    return gqlObjectFields
-        .filter(({ type }) => type.kind === "LIST")
-        .map(({ name }) => name);
-}
-
-export function downloadExcelWithData(fileName, data, typeName) {
+/**
+ * Creates an excel file of type .xlsx
+ * @param {*} fileName The name of the file to be created
+ * @param {*} data the data to be saved in the excel file. 
+ * For example: data = [{
+            id: 1,
+            firstName: "Jane",
+            lastName: "Doe",
+            children:[{id:3, name:"Bob"},{id:4, name:"John"}],
+            certifications: ["java","js"]
+        },
+        {
+            id:2,
+            firstName: "John",
+            lastName: "Doe",
+            children:[{id:5, name:"Bob"},{id:6, name:"John"}],
+            certifications: ["java","js"]
+        }
+    ]
+ * @param {*} typeName The name of the main type. For example: User
+ */
+export function createAndDownloadExcelWithData(fileName, data, typeName) {
     const newWorkbook = XLSX.utils.book_new();
     const entry = data[0];
     const listNames = _.keys(entry).filter(key => Array.isArray(entry[key]));
 
-    const lists = {};
+    if (listNames) {
 
-    listNames.forEach(name => {
-        lists[name] = data.flatMap(entry => {
-            const currentList = entry[name];
+        const lists = listNames.reduce((listObj, name) => {
+            listObj[name] = data.flatMap(entry => {
+                const currentList = entry[name];
 
-            currentList.forEach(listItem => listItem.parentId = entry.id);
+                currentList.forEach(listItem => listItem.parentId = entry.id);
 
-            return currentList;
+                return currentList;
+            });
+
+            return listObj;
+        }, {})
+
+        addSheetToWorkbook(typeName, newWorkbook, data);
+
+        _.keys(lists).forEach(listName => {
+            addSheetToWorkbook(listName, newWorkbook, lists[listName]);
         });
-    });
+    }
 
-    addSheetToWorkbook(typeName, newWorkbook, data);
-
-    _.keys(lists).forEach(listName => {
-        addSheetToWorkbook(listName, newWorkbook, lists[listName]);
-    });
-
-    XLSX.writeFile(newWorkbook, `${fileName}.xlsx`);
+    downloadExcelFile(newWorkbook, fileName)
 }
 
+/**
+ * Adds a new sheet to a workbook with data
+ * @param {*} sheetName The name of the sheet to add
+ * @param {*} workbook A workbook created via XLSX.utils.book_new()
+ * @param {*} data The data saved in the sheet
+ */
 function addSheetToWorkbook(sheetName, workbook, data) {
     const worksheet = XLSX.utils.json_to_sheet(data);
     XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+}
+
+function downloadExcelFile(workbook, fileName) {
+    XLSX.writeFile(workbook, `${fileName}.xlsx`);
 }

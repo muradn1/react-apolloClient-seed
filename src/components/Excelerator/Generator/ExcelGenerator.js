@@ -15,7 +15,7 @@ import ProgressBar from '../../Progress/ProgressBar';
 import ErrorIcon from '@material-ui/icons/Error';
 import GetAppIcon from '@material-ui/icons/GetApp';
 
-import { downloadExcelWithData } from '../Excelerator';
+import { createAndDownloadExcelWithData } from '../Excelerator';
 
 ExcelGenerator.propTypes = {
     getAllDataQuery: PropTypes.object.isRequired,
@@ -32,7 +32,7 @@ export default function ExcelGenerator({ getAllDataQuery, typeName }) {
             const key = _.keys(data)[0];
             const dataArr = data[key];
 
-            downloadExcelWithData(`${typeName}-data`, dataArr, typeName);
+            createAndDownloadExcelWithData(`${typeName}-data`, dataArr, typeName);
 
             setDataLoaded(true);
         }
