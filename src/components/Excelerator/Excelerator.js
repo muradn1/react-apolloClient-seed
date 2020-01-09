@@ -8,14 +8,12 @@ import _ from "lodash";
  * For example: data = [{
             id: 1,
             firstName: "Jane",
-            lastName: "Doe",
             children:[{id:3, name:"Bob"},{id:4, name:"John"}],
             certifications: ["java","js"]
         },
         {
             id:2,
             firstName: "John",
-            lastName: "Doe",
             children:[{id:5, name:"Bob"},{id:6, name:"John"}],
             certifications: ["java","js"]
         }
@@ -41,17 +39,12 @@ export function loadDataFromExcelFile(excel) {
  * 
  * @param {*} mainData The main type. For example: "User"
  * @param {*} listNames The names of the lists connected to the main type. For example: ["Children", "Certifications"]
- * @param {*} workbook The workbook in which the data is saved. First sheet is the main type and the rest are the lists
+ * @param {*} workbook The workbook in which the data is saved. First sheet is the main type and the rest are the lists. Can be acquired using XLSX.utils.book_new()
  * @description Addsd the list data to the main type
  */
 function addListsToMainTypeObject(mainData, listNames, workbook) {
     listNames.forEach(name => {
-        /**
-         * listData = {
-         *  "children": [{id:5, name:"Bob", parentId: 1},{id:6, name:"John", parentId: 1}],
-         *  "certifications": ["java","js"]
-         * }
-         */
+        // listData = [{id:5, name:"Bob", parentId: 1},{id:6, name:"John", parentId: 1}]
         const listData = XLSX.utils.sheet_to_json(workbook.Sheets[name]);
         const dataGroupedByParentId = _.groupBy(listData, x => x.parentId);
 
@@ -74,47 +67,64 @@ function addListsToMainTypeObject(mainData, listNames, workbook) {
  * For example: data = [{
             id: 1,
             firstName: "Jane",
-            lastName: "Doe",
             children:[{id:3, name:"Bob"},{id:4, name:"John"}],
             certifications: ["java","js"]
         },
         {
             id:2,
             firstName: "John",
-            lastName: "Doe",
             children:[{id:5, name:"Bob"},{id:6, name:"John"}],
             certifications: ["java","js"]
         }
     ]
  * @param {*} typeName The name of the main type. For example: User
  */
-export function createAndDownloadExcelWithData(fileName, data, typeName) {
+export function createAndDownloadExcelWithData({ fileName, data, typeName, schema }) {
     const newWorkbook = XLSX.utils.book_new();
-    const entry = data[0];
-    const listNames = _.keys(entry).filter(key => Array.isArray(entry[key]));
 
-    if (listNames) {
-
-        const lists = listNames.reduce((listObj, name) => {
-            listObj[name] = data.flatMap(entry => {
-                const currentList = entry[name];
-
-                currentList.forEach(listItem => listItem.parentId = entry.id);
-
-                return currentList;
-            });
-
-            return listObj;
-        }, {})
-
-        addSheetToWorkbook(typeName, newWorkbook, data);
-
-        _.keys(lists).forEach(listName => {
-            addSheetToWorkbook(listName, newWorkbook, lists[listName]);
-        });
+    if (data) {
+        createExcelFileWithData(data, typeName, newWorkbook);
+    } else if (schema) {
+        createExcelFileFromSchema(schema, typeName, newWorkbook);
+    } else {
+        throw new Error('In order to generate excel file data or schema must be given');
     }
 
-    downloadExcelFile(newWorkbook, fileName)
+    // Writes the file and downloads it
+    XLSX.writeFile(newWorkbook, `${fileName}.xlsx`);
+}
+
+function createExcelFileFromSchema(schema, typeName, newWorkbook) {
+    const { fields } = schema.__type;
+    const excelFields = getExcelFields(fields);
+    addSheetToWorkbook(typeName, newWorkbook, [excelFields]);
+    _.keys(excelFields.lists).forEach(listName => {
+        const currentListData = [excelFields.lists[listName]];
+        addSheetToWorkbook(listName, newWorkbook, currentListData);
+    });
+}
+
+function getExcelFields(fields) {
+    const excelFields = fields.reduce((excelFields, { name, type }) => {
+
+        if (type.kind !== 'LIST') {
+            excelFields[name] = {};
+        } else {
+            const { fields: listFields } = type.ofType;
+
+            const currentListFields = listFields.reduce((currentListFields, { name }) => {
+                currentListFields[name] = {};
+
+                return currentListFields;
+            }, {})
+
+            excelFields.lists[name] = currentListFields;
+        }
+
+        return excelFields;
+    }, { lists: {} });
+
+    return excelFields;
 }
 
 /**
@@ -128,6 +138,34 @@ function addSheetToWorkbook(sheetName, workbook, data) {
     XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
 }
 
-function downloadExcelFile(workbook, fileName) {
-    XLSX.writeFile(workbook, `${fileName}.xlsx`);
+function createExcelFileWithData(data, typeName, workbookToCreate) {
+    const entry = data[0];
+    const listNames = _.keys(entry).filter(key => Array.isArray(entry[key]));
+
+    if (listNames) {
+        const lists = getListsInGqlType(listNames, data);
+
+        addSheetToWorkbook(typeName, workbookToCreate, data);
+
+        _.keys(lists).forEach(listName => {
+            addSheetToWorkbook(listName, workbookToCreate, lists[listName]);
+        });
+    }
+}
+
+function getListsInGqlType(listNames, gqlData) {
+    const lists = listNames.reduce((listObj, name) => {
+        listObj[name] = gqlData.flatMap(entry => {
+            const currentList = entry[name];
+
+            currentList.forEach(listItem => listItem.parentId = entry.id);
+
+            // currentList = [{id:3, name:"Bob", parentId = "1"},{id:4, name:"John", parentId = "1"}]
+            return currentList;
+        });
+
+        return listObj;
+    }, {})
+
+    return lists;
 }

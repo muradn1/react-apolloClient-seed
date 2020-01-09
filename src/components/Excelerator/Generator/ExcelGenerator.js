@@ -16,6 +16,7 @@ import ErrorIcon from '@material-ui/icons/Error';
 import GetAppIcon from '@material-ui/icons/GetApp';
 
 import { createAndDownloadExcelWithData } from '../Excelerator';
+import { GET_TYPE } from "../../../graphql/SchemaGql";
 
 ExcelGenerator.propTypes = {
     getAllDataQuery: PropTypes.object.isRequired,
@@ -25,18 +26,32 @@ ExcelGenerator.propTypes = {
 export default function ExcelGenerator({ getAllDataQuery, typeName }) {
 
     const [getAllData, { error, loading, data }] = useLazyQuery(getAllDataQuery);
-    const [dataLoaded, setDataLoaded] = useState(false);
+    const [getType, { error: getTypeError, loading: getTypeLoading, data: schemaTypeToGenerate }] = useLazyQuery(GET_TYPE);
+    // const [dataLoaded, setDataLoaded] = useState(false);
+    const [resultMessage, setResultMessage] = useState(null);
 
     useEffect(() => {
         if (data) {
-            const key = _.keys(data)[0];
-            const dataArr = data[key];
+            const keys = _.keys(data);
+            // if (keys.length > 0) {
+            if (keys.length === 0) {
+                const key = keys[0];
+                const dataArr = data[key];
+                createAndDownloadExcelWithData({ fileName: `${typeName}-data`, data: dataArr, typeName });
+                // setDataLoaded(true);
+                setResultMessage(`Excel file of type ${typeName} downloaded successfully`);
+            } else {
+                getType({variables: {typeName}})
+            }
 
-            createAndDownloadExcelWithData(`${typeName}-data`, dataArr, typeName);
-
-            setDataLoaded(true);
         }
-    }, [data, typeName])
+    }, [data, getType, typeName])
+
+    useEffect(() => {
+        if (schemaTypeToGenerate) {
+            createAndDownloadExcelWithData({ fileName: `${typeName}-data`, schema: schemaTypeToGenerate , typeName });
+        }
+    }, [schemaTypeToGenerate, getType, typeName])
 
     if (error) {
         console.error(error);
@@ -53,7 +68,7 @@ export default function ExcelGenerator({ getAllDataQuery, typeName }) {
         </div>
     }
 
-    if (loading) {
+    if (loading || getTypeLoading) {
         return <ProgressBar />;
     }
 
@@ -62,7 +77,7 @@ export default function ExcelGenerator({ getAllDataQuery, typeName }) {
             <div className="excel-generator-container">
                 <div className="generate-excel-btn">
                     <Button onClick={getAllData} variant="contained" color="primary">
-                        Generate excel file for {typeName} <GetAppIcon/>
+                        Generate excel file for {typeName} <GetAppIcon />
                     </Button>
                 </div>
             </div>
@@ -71,11 +86,13 @@ export default function ExcelGenerator({ getAllDataQuery, typeName }) {
                     vertical: 'bottom',
                     horizontal: 'left',
                 }}
-                open={dataLoaded}
+                // open={dataLoaded}
+                open={ resultMessage !== null }
                 autoHideDuration={2000}
-                onClose={() => setDataLoaded(false)}>
+                // onClose={() => setDataLoaded(false)}>
+                onClose={() => setResultMessage(null)}>
                 <SnackbarContent className={"success-snackbar"}
-                    message={`Excel file for type ${typeName} was generated succesfully`}
+                    message={resultMessage}
                 />
             </Snackbar>
         </div>

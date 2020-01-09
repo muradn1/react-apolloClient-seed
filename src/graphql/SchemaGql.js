@@ -2,25 +2,15 @@ import gql from "graphql-tag";
 
 export const TYPE_FRAGMENT = gql`
     fragment TypeFrag on __Type {
-        kind
         name
-        inputFields {
-            name
-            type {
-              kind
-              ofType {
-                kind
-                inputFields {
-                    name
-                }
-              }
-            }
-          }
         fields {
             name
             type {
                 ofType {
                     kind
+                    fields {
+                        name
+                    }
                 }
                 kind
             }
