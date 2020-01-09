@@ -112,13 +112,18 @@ function getExcelFields(fields) {
         } else {
             const { fields: listFields } = type.ofType;
 
-            const currentListFields = listFields.reduce((currentListFields, { name }) => {
-                currentListFields[name] = {};
+            if(listFields) {
+                const currentListFields = listFields.reduce((currentListFields, { name }) => {
+                    currentListFields[name] = {};
 
-                return currentListFields;
-            }, {})
+                    return currentListFields;
+                }, {});
 
-            excelFields.lists[name] = currentListFields;
+                excelFields.lists[name] = currentListFields;
+            } else {
+                // concider taking the values and not the keys
+                excelFields.lists[name] = new Array(3).fill(0).map((_, index) => `${name}${index}`);
+            }
         }
 
         return excelFields;
