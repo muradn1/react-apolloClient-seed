@@ -16,7 +16,10 @@ import PropTypes from 'prop-types';
 
 FormLoader.propTypes = {
     history: PropTypes.shape({
-        listen: PropTypes.func.isRequired
+        listen: PropTypes.func.isRequired,
+        location: PropTypes.shape({
+            pathname: PropTypes.string.isRequired
+        }).isRequired
     }).isRequired
 }
 
@@ -24,9 +27,22 @@ function FormLoader({ history }) {
     const UserFormToLoad = (id) => (<UserForm id={id} closeForm={closeForm} />);
     const OtherFormToLoad = (id) => (<OtherForm id={id} closeForm={closeForm} />);
 
+    const chooseFormToLoadByPathName = (pathname) => {
+        switch (pathname) {
+            case RouterEnum.USERS: {
+                return UserFormToLoad;
+            }
+            case RouterEnum.OTHER: {
+                return OtherFormToLoad;
+            }
+            default:
+                return null;
+        }
+    }
+
     const [isOpen, setIsOpen] = useState(false);
     const [entityId, setEntityId] = useState(null);
-    const [formToLoad, setFormToLoad] = useState(() => UserFormToLoad);
+    const [formToLoad, setFormToLoad] = useState(() => chooseFormToLoadByPathName(history.location.pathname));
     const [anchorEl, setAnchorEl] = React.useState(null);
 
 
@@ -46,23 +62,11 @@ function FormLoader({ history }) {
     }
 
 
-    const onRouteChange = ({ pathname }) => {
-        switch (pathname) {
-            case RouterEnum.USERS: {
-                setFormToLoad(() => UserFormToLoad);
-                break;
-            }
-            case RouterEnum.OTHER: {
-                setFormToLoad(() => OtherFormToLoad);
-                break;
-            }
-            default:
-                break;
-        }
-    }
-
     useEffect(() => {
-        const unListen = history.listen(onRouteChange);
+        console.log(history);
+        const unListen = history.listen(({ pathname }) => {
+            setFormToLoad(() => chooseFormToLoadByPathName(pathname));
+        });
         return () => {
             unListen();
         };

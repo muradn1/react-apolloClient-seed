@@ -1,11 +1,39 @@
 import XLSX from "xlsx";
-import _ from "lodash";
+
+export class EntitySchemaForExcel {
+  entityName; //"User"
+  scalarFields = []; //["firstName","lastName",...]
+  embeddedObjsNames = []; //["address",...]
+  scalarListsNames = []; //["certifications",...]
+  objsListsNames = []; //["children",...]
+
+  /**
+   * here comes the  fields of embeddedObjs in shape of:
+   * ["embeddedObjName"] : EntitySchemaForExcel 
+   * 
+   * example : 
+   * address:{
+   * scalarFields:["city, address, ..."]
+   * }
+   */
+
+  /**
+ * here comes the  fields of ListsObjs in shape of:
+ * ["objsListName"] : EntitySchemaForExcel
+ *
+ * example : 
+ * children:{
+ * scalarFields:["name, age, ..."]
+ * }
+ */
+}
+
 
 /**
  * 
  * @param {*} excel Binary representation of an excel file. Could be acquired using js FileReader
  * @returns Representation of the data in the excel file. 
- * For example: data = [{
+ * For example: result data = [{
             id: 1,
             firstName: "Jane",
             children:[{id:3, name:"Bob"},{id:4, name:"John"}],
@@ -19,52 +47,85 @@ import _ from "lodash";
         }
     ]
  */
-export function loadDataFromExcelFile(excel) {
-  const workbook = XLSX.read(excel, {
-    type: "binary"
-  });
+export function loadDataFromExcelFile(entitySchema, excel) {
+  const workbook = XLSX.read(excel, { type: "binary" });
 
-  const [mainType, ...listsNames] = workbook.SheetNames;
+  const [mainSheetName, ...listsNames] = workbook.SheetNames;
 
-  const data = XLSX.utils.sheet_to_json(workbook.Sheets[mainType]);
+  const mainSheetData = XLSX.utils.sheet_to_json(workbook.Sheets[mainSheetName]);
+  //example: array of users
+  const mainEntitiesArr = loadMainSheetData(entitySchema, mainSheetData);
 
-  if (listsNames) {
-    addListsToMainTypeObject(data, listsNames, workbook);
-  }
+  listsNames.forEach(ln => {
+    let listSheetData = XLSX.utils.sheet_to_json(workbook.Sheets[ln]);
+    if (entitySchema.scalarListsNames.includes(ln)) {
+      addScalarListToMainEntitiesArr(mainEntitiesArr, entitySchema, ln, listSheetData);
+    } else {
+      addObjListToMainEntitiesArr(mainEntitiesArr, entitySchema, ln, listSheetData);
+    }
+  })
 
-  return data;
+  return mainEntitiesArr;
 }
 
-/**
- *
- * @param {*} mainData The main type. For example: "User"
- * @param {*} listNames The names of the lists connected to the main type. For example: ["Children", "Certifications"]
- * @param {*} workbook The workbook in which the data is saved. First sheet is the main type and the rest are the lists. Can be acquired using XLSX.utils.book_new()
- * @description Addsd the list data to the main type
- */
-function addListsToMainTypeObject(mainData, listNames, workbook) {
-  listNames.forEach(name => {
-    // listData = [{id:5, name:"Bob", parentId: 1},{id:6, name:"John", parentId: 1}]
-    const listData = XLSX.utils.sheet_to_json(workbook.Sheets[name]);
-    const dataGroupedByParentId = _.groupBy(listData, x => x.parentId);
+function loadMainSheetData(entitySchema, sheetData) {
+  const mainEntitiesArr = sheetData.map(entryDataFromExcel => {
+    let entry = {};
 
-    _.keys(dataGroupedByParentId).forEach(parentId => {
-      const parent = mainData.find(entry => entry.id === parentId);
+    entitySchema.scalarFields.forEach(sf => {
+      entry[`${sf}`] = entryDataFromExcel[`${sf}`]
+    });
 
-      if (!parent) {
-        throw new Error(`Parent with id ${parentId} cannot be null`);
+    entitySchema.embeddedObjsNames.forEach(eon => {
+      entry[`${eon}`] = {};
+
+      entitySchema[`${eon}`].scalarFields.forEach(eosf => {
+        entry[`${eon}`][`${eosf}`] = entryDataFromExcel[`${eon}.${eosf}`];
+      })
+    })
+
+    return entry;
+  })
+
+  return mainEntitiesArr;
+
+}
+
+function addScalarListToMainEntitiesArr(mainEntitiesArr, entitySchema, listName, listSheetData) {
+  mainEntitiesArr.forEach(me => {
+    me[`${listName}`] = [];
+
+    listSheetData.forEach(lsde => {
+      if (lsde[`${entitySchema.entityName}Id`] === me.id){
+        me[`${listName}`].push(lsde[`${listName.replace(/s$/,"")}`]);
       }
-
-      parent[name] = dataGroupedByParentId[parentId];
     });
   });
 }
 
+function addObjListToMainEntitiesArr(mainEntitiesArr, entitySchema, listName, listSheetData) {
+  mainEntitiesArr.forEach(me => {
+    me[`${listName}`] = [];
+
+    listSheetData.forEach(lsde => {
+      if (lsde[`${entitySchema.entityName}Id`] === me.id){
+        let listObj = {};
+
+        entitySchema[`${listName}`].scalarFields.forEach(olsf => {
+          listObj[`${olsf}`] = lsde[`${olsf}`];
+        })
+        me[`${listName}`].push(listObj);
+      }
+    });
+  });
+}
+
+
 /**
- * Creates an excel file of type .xlsx
  * @param {*} fileName The name of the file to be created
- * @param {*} data the data to be saved in the excel file. 
- * For example: data = [{
+ * @param {*} entitySchema is instanse of EntitySchemaForExcel
+ * @param {*} allData  to be saved in the excel file.
+ * For example: allData = [{
             id: 1,
             firstName: "Jane",
             children:[{id:3, name:"Bob"},{id:4, name:"John"}],
@@ -77,146 +138,145 @@ function addListsToMainTypeObject(mainData, listNames, workbook) {
             certifications: ["java","js"]
         }
     ]
- * @param {*} typeName The name of the main type. For example: User
  */
-export function createAndDownloadExcelWithData({
-  fileName,
-  data,
-  typeName,
-  schema
-}) {
-  const newWorkbook = XLSX.utils.book_new();
-  const { fields } = schema.__type;
-  const header = {};
-  const lists = [];
+export function generateAndDownloadExcelFile(fileName, entitySchema, allData) {
 
-  fields.forEach(field => {
-    const { type } = field;
-    if (type.kind === "LIST") {
-      const { ofType } = field.type;
-      const list = {};
-      const listHeader = {};
-      if (ofType.kind == "OBJECT") {
-        ofType.fields.forEach(fieldOfList => {
-          listHeader[fieldOfList.name] = undefined;
-        });
-      } else {
-        const fieldName = field.name.substring(0, field.name.length - 1);
-        listHeader[fieldName] = undefined;
-      }
-      listHeader.parentId = undefined;
-      list[field.name] = listHeader;
-      lists.push(list);
-    } else if (type.kind === "OBJECT") {
-      const { type } = field;
-      type.fields.forEach(({ name }) => {
-        header[`${field.name}.${name}`] = undefined;
-      });
+  const newWorkbook = XLSX.utils.book_new();
+  let dataForMainSheet = [];
+
+
+  //generate main sheet
+
+  if (allData && allData.length > 0) {
+    dataForMainSheet = allData.map(entryData => {
+      return generateEntryForMainSheet(entitySchema, entryData);
+    })
+  } else {
+    //if there's no data then only generates the header.
+    dataForMainSheet[0] = generateEntryForMainSheet(entitySchema);
+  }
+
+  addSheetToWorkbook(entitySchema.entityName, newWorkbook, dataForMainSheet);
+
+
+  //generate sheets for scalarLists
+
+  entitySchema.scalarListsNames.forEach(sln => {
+    let dataForScalarListSheet = [];
+
+    if (allData && allData.length > 0) {
+      dataForScalarListSheet = allData.flatMap(entryData => {
+        return generateEntriesForScalarListSheet(entitySchema, sln, entryData);
+      })
     } else {
-      header[field.name] = undefined;
+      //if there's no data then only generates the header.
+      dataForScalarListSheet = generateEntriesForScalarListSheet(entitySchema, sln);
     }
-  });
-  debugger;
-  console.log(lists);
-  //   if (data) {
-  //     createExcelFileWithData(data, typeName, newWorkbook);
-  //   } else if (schema) {
-  //     createExcelFileFromSchema(schema, typeName, newWorkbook);
-  //   } else {
-  //     throw new Error(
-  //       "In order to generate excel file data or schema must be given"
-  //     );
-  //   }
-  // Writes the file and downloads it
-  addSheetToWorkbook(typeName, newWorkbook, [header]);
-  // TODO: write the lists
+
+    addSheetToWorkbook(sln, newWorkbook, dataForScalarListSheet);
+  })
+
+
+  //generate sheets for objLists
+
+  entitySchema.objsListsNames.forEach(oln => {
+    let dataForObjListSheet = [];
+
+    if (allData && allData.length > 0) {
+      dataForObjListSheet = allData.flatMap(entryData => {
+        return generateEntriesForObjListSheet(entitySchema, oln, entryData);
+      })
+    } else {
+      //if there's no data then only generates the header.
+      dataForObjListSheet = generateEntriesForObjListSheet(entitySchema, oln);
+    }
+
+    addSheetToWorkbook(oln, newWorkbook, dataForObjListSheet);
+
+  })
+
+  // writes the file and downloads it
   XLSX.writeFile(newWorkbook, `${fileName}.xlsx`);
 }
 
-function createExcelFileFromSchema(schema, typeName, newWorkbook) {
-  const { fields } = schema.__type;
-  const excelFields = getExcelFields(fields);
-  addSheetToWorkbook(typeName, newWorkbook, [excelFields]);
-  _.keys(excelFields.lists).forEach(listName => {
-    const currentListData = [excelFields.lists[listName]];
-    addSheetToWorkbook(listName, newWorkbook, currentListData);
-  });
+function generateEntryForMainSheet(entitySchema, entryData = {}) {
+  let entryForSheet = entitySchema.scalarFields.reduce((header, sf) => {
+    header[sf] = entryData[sf];
+
+    return header;
+  }, {});
+
+  entryForSheet = entitySchema.embeddedObjsNames.reduce((header, eon) => {
+    entitySchema[eon].scalarFields.forEach(embeddedScalarFieldName => {
+      header[`${eon}.${embeddedScalarFieldName}`] = entryData[`${eon}`] ? entryData[`${eon}`][`${embeddedScalarFieldName}`] : undefined;
+    })
+
+    return header;
+  }, entryForSheet);
+
+  return entryForSheet;
 }
 
-function getExcelFields(fields) {
-  const excelFields = fields.reduce(
-    (excelFields, { name, type }) => {
-      if (type.kind !== "LIST") {
-        excelFields[name] = {};
-      } else {
-        const { fields: listFields } = type.ofType;
+function generateEntriesForScalarListSheet(entitySchema, scalarListName, mainEntityEntry = {}) {
 
-        if (listFields) {
-          const currentListFields = listFields.reduce(
-            (currentListFields, { name }) => {
-              currentListFields[name] = {};
 
-              return currentListFields;
-            },
-            {}
-          );
+  let entriesForSheet = [];
 
-          excelFields.lists[name] = currentListFields;
-        } else {
-          // concider taking the values and not the keys
-          excelFields.lists[name] = new Array(3)
-            .fill(0)
-            .map((_, index) => `${name}${index}`);
-        }
-      }
+  if (mainEntityEntry[`${scalarListName}`]) {
+    entriesForSheet = mainEntityEntry[`${scalarListName}`].map((slEntry) =>
+      generateSingleEntryForScalarListSheet(entitySchema, scalarListName, mainEntityEntry, slEntry));
 
-      return excelFields;
-    },
-    { lists: {} }
-  );
+  } else {
+    entriesForSheet[0] = generateSingleEntryForScalarListSheet(entitySchema, scalarListName);
+  }
 
-  return excelFields;
+  return entriesForSheet;
+}
+
+function generateSingleEntryForScalarListSheet(entitySchema, scalarListName, mainEntityData = {}, scalarListEntry) {
+  let slEntryForSheet = {};
+
+  slEntryForSheet[`${entitySchema.entityName}Id`] = mainEntityData.id;
+  slEntryForSheet[`${scalarListName.replace(/s$/, "")}`] = scalarListEntry;
+
+  return slEntryForSheet;
+}
+
+function generateEntriesForObjListSheet(entitySchema, objListName, mainEntityEntry = {}) {
+  let entriesForSheet = [];
+
+  if (mainEntityEntry[`${objListName}`]) {
+    entriesForSheet = mainEntityEntry[`${objListName}`].map((olEntry) =>
+      generateSingleEntryForObjListSheet(entitySchema, objListName, mainEntityEntry, olEntry));
+
+  } else {
+    entriesForSheet[0] = generateSingleEntryForObjListSheet(entitySchema, objListName);
+  }
+
+  return entriesForSheet;
+}
+
+function generateSingleEntryForObjListSheet(entitySchema, objListName, mainEntityData = {}, objListEntry = {}) {
+  let olEntryForSheet = {};
+
+  olEntryForSheet[`${entitySchema.entityName}Id`] = mainEntityData.id;
+  entitySchema[`${objListName}`].scalarFields.reduce((singleEntry, sf) => {
+    singleEntry[`${sf}`] = objListEntry[`${sf}`];
+
+    return singleEntry;
+  }, olEntryForSheet)
+
+  return olEntryForSheet;
 }
 
 /**
  * Adds a new sheet to a workbook with data
  * @param {*} sheetName The name of the sheet to add
  * @param {*} workbook A workbook created via XLSX.utils.book_new()
- * @param {*} data The data saved in the sheet
+ * @param {*} data The data saved in the sheet in shape of [{id:1, firstName:"aa",...},{id:2, firstname:"bb",...}]
  */
 function addSheetToWorkbook(sheetName, workbook, data) {
+  //this function generate the first row as to the name of the fields in the first object in data, e.g. "id", "firstName"...
   const worksheet = XLSX.utils.json_to_sheet(data);
   XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
-}
-
-function createExcelFileWithData(data, typeName, workbookToCreate) {
-  const entry = data[0];
-  const listNames = _.keys(entry).filter(key => Array.isArray(entry[key]));
-
-  if (listNames) {
-    const lists = getListsInGqlType(listNames, data);
-
-    addSheetToWorkbook(typeName, workbookToCreate, data);
-
-    _.keys(lists).forEach(listName => {
-      addSheetToWorkbook(listName, workbookToCreate, lists[listName]);
-    });
-  }
-}
-
-function getListsInGqlType(listNames, gqlData) {
-  const lists = listNames.reduce((listObj, name) => {
-    listObj[name] = gqlData.flatMap(entry => {
-      const currentList = entry[name];
-
-      currentList.forEach(listItem => (listItem.parentId = entry.id));
-
-      // currentList = [{id:3, name:"Bob", parentId = "1"},{id:4, name:"John", parentId = "1"}]
-      return currentList;
-    });
-
-    return listObj;
-  }, {});
-
-  return lists;
 }

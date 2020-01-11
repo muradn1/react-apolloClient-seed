@@ -2,12 +2,13 @@ import { loadDataFromExcelFile } from "../Excelerator";
 
 export default class ExcelFileReader {
 
-    constructor() {
+    constructor(entitySchemaForExel) {
         this.fileReader = new FileReader();
+        this.entitySchemaForExel = entitySchemaForExel;
     }
 
     readExcel(file) {
-        if(file) {
+        if (file) {
             this.fileReader.readAsBinaryString(file);
         }
     }
@@ -15,9 +16,10 @@ export default class ExcelFileReader {
     onExcelFileLoad(callback) {
         this.fileReader.onload = (e) => {
             const data = e.target.result;
-            const rows = loadDataFromExcelFile(data);
+            console.log(this.entitySchemaForExel);
+            const dataFromExcel = loadDataFromExcelFile(Object.freeze(this.entitySchemaForExel),data);
 
-            callback({rows, e});
+            callback({ dataFromExcel, e });
         };
     }
 

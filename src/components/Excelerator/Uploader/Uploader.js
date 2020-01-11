@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import PropTypes from 'prop-types';
 
 import './uploader.scss';
@@ -12,20 +12,27 @@ import AddIcon from '@material-ui/icons/Add';
 import ErrorIcon from '@material-ui/icons/Error';
 import CheckCircleIcon from '@material-ui/icons/CheckCircle';
 import ExcelFileReader from '../ExcelFileReader/ExcelFileReader';
+import { EntitySchemaForExcel } from '../Excelerator';
 
 const excelFileReader = new ExcelFileReader();
 
 Uploader.propTypes = {
-    onFileRead: PropTypes.func.isRequired
+    onFileLoad: PropTypes.func.isRequired,
+    entitySchemaForExcel: PropTypes.instanceOf(EntitySchemaForExcel)
 }
 
-export default function Uploader({ onFileRead }) {
+export default function Uploader({ onFileLoad, entitySchemaForExcel }) {
 
     const [errorOccurred, setErrorOccurred] = useState(false);
     const [fileLoaded, setFileLoaded] = useState(false);
 
-    excelFileReader.onExcelFileLoad(({ rows }) => {
-        onFileRead(rows);
+    useEffect(() =>{
+        excelFileReader.entitySchemaForExel = entitySchemaForExcel;
+
+    }, [entitySchemaForExcel])
+
+    excelFileReader.onExcelFileLoad(({ dataFromExcel }) => {
+        onFileLoad(dataFromExcel);
         setFileLoaded(true);
     });
 

@@ -1,47 +1,59 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 import PropTypes from 'prop-types';
 
 import { useMutation, useLazyQuery } from '@apollo/react-hooks';
 
-import { Button } from '@material-ui/core';
+import { Button, Snackbar, SnackbarContent } from '@material-ui/core';
 import SaveIcon from '@material-ui/icons/Save';
+import { EntitySchemaForExcel } from '../Excelerator';
 
 Saver.propTypes = {
-    typeToCreate: PropTypes.string.isRequired,
-    createQuery: PropTypes.object.isRequired,
-    updateQuery: PropTypes.object.isRequired,
+    syncMutation: PropTypes.object.isRequired,
     getAllQuery: PropTypes.object.isRequired,
-    data: PropTypes.array.isRequired,
+    isDisabled: PropTypes.bool.isRequired,
+    closePopup: PropTypes.func.isRequired,
+    entitySchemaForExcel: PropTypes.instanceOf(EntitySchemaForExcel),
+    syncMutationVariables: PropTypes.shape({
+        variables: PropTypes.any.isRequired
+    })
 };
 
-export default function Saver({ typeToCreate, createQuery, getAllQuery, data, updateQuery }) {
+export default function Saver({ syncMutation, syncMutationVariables, getAllQuery, entitySchemaForExcel, isDisabled, closePopup }) {
 
     const [getAll] = useLazyQuery(getAllQuery);
-    const [updateMutation] = useMutation(updateQuery, {
-        onCompleted() { console.info(`${typeToCreate} updated succesfully`) }
-    });
-    const [createMutation] = useMutation(createQuery, {
-        onCompleted: () => { console.info(`${typeToCreate} created succesfully`) },
+    const [snackBarMassage, setSnackBarMassage] = useState();
+
+    const [callSyncMutation] = useMutation(syncMutation, {
+        onCompleted: () => {
+            getAll();
+            setSnackBarMassage(`${entitySchemaForExcel.entityName}s saved successfully`);
+        }
     });
 
-    const save = (dataFromExcel) => {
-        dataFromExcel.forEach(user => {
-            if (user.id) {
-                updateMutation({ variables: { userInput: user } });
-            } else {
-                createMutation({ variables: { userInput: user } });
-            }
-        });
 
-        getAll();
+    const save = () => {
+        callSyncMutation(syncMutationVariables);
     }
 
     return (
         <div>
-            <Button disabled={data.length === 0} variant="contained" color="primary" component="span" onClick={() => save(data)}>
+            <Button disabled={isDisabled} variant="contained" color="primary" component="span" onClick={() => save()}>
                 Save data in repository <SaveIcon />
             </Button>
+
+            <Snackbar
+                anchorOrigin={{
+                    vertical: 'bottom',
+                    horizontal: 'left',
+                }}
+                open={snackBarMassage}
+                autoHideDuration={3000}
+                onClose={() => closePopup()}>
+                <SnackbarContent className={"success-snackbar"}
+                    message={snackBarMassage}
+                />
+            </Snackbar>
         </div>
     )
 }
