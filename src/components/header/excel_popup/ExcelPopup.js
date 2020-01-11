@@ -105,7 +105,6 @@ function ExcelPopup({ closePopup, history }) {
                             break;
                         }
 
-
                         default:
                             break;
                     }
