@@ -65,7 +65,7 @@ function App() {
             <div className="routes">
               <Route path={RouterEnum.USERS} component={Users} />
               <Route path={RouterEnum.OTHER} component={Other} />
-              <Redirect exact from="/" to="/users" />
+              <Redirect exact from="/" to={RouterEnum.USERS} />
             </div>
           </SplitPane>
           <FormLoader />

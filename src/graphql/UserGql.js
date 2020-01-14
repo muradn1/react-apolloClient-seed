@@ -1,17 +1,34 @@
 import gql from 'graphql-tag';
 
-export const UserFragment = gql`
-    fragment UserEniteFields on User {
+const UserFragment = gql`
+    fragment UserEntireFields on User {
+    id
+      firstName
+      lastName
+      email
+      avatar
+      address{
+          city
+          street
+      }
+      certifications
+      children {
         id
-        firstName
-        lastName
-        email
-        avatar
-        children{
+        name
+        age
+      }
+    }
+`;
+
+const SyncResultFragment = gql`
+    fragment usersSyncResult on UsersSyncResult {
+        usersCreated {
             id
-            name
-            age
         }
+        usersUpdated {
+            id
+        }
+        deletedUsersIds
     }
 `;
 
@@ -30,29 +47,47 @@ export const GET_All_USERS = gql`
     }
     
 `;
-
-export const USER_BY_ID_QUERY = gql`
-      query User($id: ID!) {
-        User(id: $id){
-            ...UserEniteFields
+export const GET_ALL_USERS_FOR_EXCEL_QUERY = gql`
+      query allUsersForExcel{
+        allUsers {
+            ...UserEntireFields
         }
       }
       ${UserFragment}
 `;
 
+export const USER_BY_ID_QUERY = gql`
+      query User($id: ID!) {
+        User(id: $id){
+            ...UserEntireFields
+        }
+      }
+      ${UserFragment}
+`;
+
+export const SYNC_USERS = gql`
+    mutation SyncUsers($users: [UserInput]){
+        syncUsers(users: $users){
+            ...usersSyncResult
+        }
+    }
+    ${SyncResultFragment}
+`;
+
 export const UPDATE_USER = gql`
-    mutation UpdateUser($userInput: UserInput){
-        updateUser(userInput: $userInput){
-            ...UserEniteFields
+    mutation UpdateUser($user: UserInput){
+        updateUser(user: $user){
+            ...UserEntireFields
         }
     }
     ${UserFragment}
 `;
 
+
 export const CREATE_USER = gql`
-    mutation CreateUser($userInput: UserInput){
-        createUser(userInput: $userInput){
-            ...UserEniteFields
+    mutation CreateUser($user: UserInput){
+        createUser(user: $user){
+            ...UserEntireFields
         }
     }
     ${UserFragment}
@@ -79,7 +114,20 @@ export class User {
         this.lastName = lastName;
         this.email = email;
         this.avatar = avatar;
-        this.children = children;
+        if (Array.isArray(children)) {
+            this.children = children.map(child => new Child(child));
+        }
+    }
+}
 
+export class Child {
+    id;
+    name;
+    age;
+
+    constructor({ id, age, name }) {
+        this.id = id;
+        this.age = age;
+        this.name = name;
     }
 }
