@@ -113,11 +113,11 @@ export default function UserForm({ id, closeForm }) {
     };
 
     const updateUser = (userToUpdate) => {
-        updateUserMutation({ variables: { userInput: userToUpdate } });
+        updateUserMutation({ variables: { user: userToUpdate } });
     }
 
     const createUser = (userToCreate) => {
-        createUserMutation({ variables: { userInput: userToCreate } });
+        createUserMutation({ variables: { user: userToCreate } });
     }
 
     return (
