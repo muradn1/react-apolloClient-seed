@@ -2,32 +2,31 @@ import XLSX from "xlsx";
 
 export class EntitySchemaForExcel {
   entityName; //"User"
-  scalarFields = []; //["firstName","lastName",...]
+  scalarFieldsNames = []; //["firstName","lastName",...]
   embeddedObjsNames = []; //["address",...]
-  scalarListsNames = []; //["certifications",...]
+  scalarsListsNames = []; //["certifications",...]
   objsListsNames = []; //["children",...]
 
   /**
    * here comes the  fields of embeddedObjs in shape of:
-   * ["embeddedObjName"] : EntitySchemaForExcel 
-   * 
-   * example : 
+   * ["embeddedObjName"] : EntitySchemaForExcel
+   *
+   * example :
    * address:{
    * scalarFields:["city, address, ..."]
    * }
    */
 
   /**
- * here comes the  fields of ListsObjs in shape of:
- * ["objsListName"] : EntitySchemaForExcel
- *
- * example : 
- * children:{
- * scalarFields:["name, age, ..."]
- * }
- */
+   * here comes the  fields of ListsObjs in shape of:
+   * ["objsListName"] : EntitySchemaForExcel
+   *
+   * example :
+   * children:{
+   * scalarFields:["name, age, ..."]
+   * }
+   */
 }
-
 
 /**
  * 
@@ -52,18 +51,30 @@ export function loadDataFromExcelFile(entitySchema, excel) {
 
   const [mainSheetName, ...listsNames] = workbook.SheetNames;
 
-  const mainSheetData = XLSX.utils.sheet_to_json(workbook.Sheets[mainSheetName]);
+  const mainSheetData = XLSX.utils.sheet_to_json(
+    workbook.Sheets[mainSheetName]
+  );
   //example: array of users
   const mainEntitiesArr = loadMainSheetData(entitySchema, mainSheetData);
 
   listsNames.forEach(ln => {
     let listSheetData = XLSX.utils.sheet_to_json(workbook.Sheets[ln]);
-    if (entitySchema.scalarListsNames.includes(ln)) {
-      addScalarListToMainEntitiesArr(mainEntitiesArr, entitySchema, ln, listSheetData);
+    if (entitySchema.scalarsListsNames.includes(ln)) {
+      addScalarsListToMainEntitiesArr(
+        mainEntitiesArr,
+        entitySchema,
+        ln,
+        listSheetData
+      );
     } else {
-      addObjListToMainEntitiesArr(mainEntitiesArr, entitySchema, ln, listSheetData);
+      addObjListToMainEntitiesArr(
+        mainEntitiesArr,
+        entitySchema,
+        ln,
+        listSheetData
+      );
     }
-  })
+  });
 
   return mainEntitiesArr;
 }
@@ -72,54 +83,65 @@ function loadMainSheetData(entitySchema, sheetData) {
   const mainEntitiesArr = sheetData.map(entryDataFromExcel => {
     let entry = {};
 
-    entitySchema.scalarFields.forEach(sf => {
-      entry[`${sf}`] = entryDataFromExcel[`${sf}`]
+    entitySchema.scalarFieldsNames.forEach(scalarFieldName => {
+      entry[`${scalarFieldName}`] = entryDataFromExcel[`${scalarFieldName}`];
     });
 
     entitySchema.embeddedObjsNames.forEach(eon => {
       entry[`${eon}`] = {};
 
-      entitySchema[`${eon}`].scalarFields.forEach(eosf => {
-        entry[`${eon}`][`${eosf}`] = entryDataFromExcel[`${eon}.${eosf}`];
-      })
-    })
+      entitySchema[`${eon}`].scalarFieldsNames.forEach(eosfn => {
+        entry[`${eon}`][`${eosfn}`] = entryDataFromExcel[`${eon}.${eosfn}`];
+      });
+    });
 
     return entry;
-  })
+  });
 
   return mainEntitiesArr;
-
 }
 
-function addScalarListToMainEntitiesArr(mainEntitiesArr, entitySchema, listName, listSheetData) {
-  mainEntitiesArr.forEach(me => {
-    me[`${listName}`] = [];
+function addScalarsListToMainEntitiesArr(
+  mainEntityObjs,
+  entitySchema,
+  listName,
+  listSheetData
+) {
+  mainEntityObjs.forEach(meo => {
+    meo[`${listName}`] = [];
 
-    listSheetData.forEach(lsde => {
-      if (lsde[`${entitySchema.entityName}Id`] === me.id){
-        me[`${listName}`].push(lsde[`${listName.replace(/s$/,"")}`]);
+    listSheetData.forEach(lsdEntry => {
+      const parentId = lsdEntry[`${entitySchema.entityName}Id`];
+      if (parentId === meo.id) {
+        meo[`${listName}`].push(lsdEntry[`${listName.replace(/s$/, "")}`]);
       }
     });
   });
 }
 
-function addObjListToMainEntitiesArr(mainEntitiesArr, entitySchema, listName, listSheetData) {
-  mainEntitiesArr.forEach(me => {
-    me[`${listName}`] = [];
+function addObjListToMainEntitiesArr(
+  mainEntityObjs,
+  entitySchema,
+  listName,
+  listSheetData
+) {
+  mainEntityObjs.forEach(meo => {
+    meo[`${listName}`] = [];
 
-    listSheetData.forEach(lsde => {
-      if (lsde[`${entitySchema.entityName}Id`] === me.id){
+    listSheetData.forEach(lsdEntry => {
+      const parentId = lsdEntry[`${entitySchema.entityName}Id`];
+
+      if (parentId === meo.id) {
         let listObj = {};
 
-        entitySchema[`${listName}`].scalarFields.forEach(olsf => {
-          listObj[`${olsf}`] = lsde[`${olsf}`];
-        })
-        me[`${listName}`].push(listObj);
+        entitySchema[`${listName}`].scalarFieldsNames.forEach(olsf => {
+          listObj[`${olsf}`] = lsdEntry[`${olsf}`];
+        });
+        meo[`${listName}`].push(listObj);
       }
     });
   });
 }
-
 
 /**
  * @param {*} fileName The name of the file to be created
@@ -140,17 +162,15 @@ function addObjListToMainEntitiesArr(mainEntitiesArr, entitySchema, listName, li
     ]
  */
 export function generateAndDownloadExcelFile(fileName, entitySchema, allData) {
-
   const newWorkbook = XLSX.utils.book_new();
   let dataForMainSheet = [];
-
 
   //generate main sheet
 
   if (allData && allData.length > 0) {
     dataForMainSheet = allData.map(entryData => {
       return generateEntryForMainSheet(entitySchema, entryData);
-    })
+    });
   } else {
     //if there's no data then only generates the header.
     dataForMainSheet[0] = generateEntryForMainSheet(entitySchema);
@@ -158,24 +178,25 @@ export function generateAndDownloadExcelFile(fileName, entitySchema, allData) {
 
   addSheetToWorkbook(entitySchema.entityName, newWorkbook, dataForMainSheet);
 
-
   //generate sheets for scalarLists
 
-  entitySchema.scalarListsNames.forEach(sln => {
+  entitySchema.scalarsListsNames.forEach(sln => {
     let dataForScalarListSheet = [];
 
     if (allData && allData.length > 0) {
       dataForScalarListSheet = allData.flatMap(entryData => {
         return generateEntriesForScalarListSheet(entitySchema, sln, entryData);
-      })
+      });
     } else {
       //if there's no data then only generates the header.
-      dataForScalarListSheet = generateEntriesForScalarListSheet(entitySchema, sln);
+      dataForScalarListSheet = generateEntriesForScalarListSheet(
+        entitySchema,
+        sln
+      );
     }
 
     addSheetToWorkbook(sln, newWorkbook, dataForScalarListSheet);
-  })
-
+  });
 
   //generate sheets for objLists
 
@@ -185,31 +206,32 @@ export function generateAndDownloadExcelFile(fileName, entitySchema, allData) {
     if (allData && allData.length > 0) {
       dataForObjListSheet = allData.flatMap(entryData => {
         return generateEntriesForObjListSheet(entitySchema, oln, entryData);
-      })
+      });
     } else {
       //if there's no data then only generates the header.
       dataForObjListSheet = generateEntriesForObjListSheet(entitySchema, oln);
     }
 
     addSheetToWorkbook(oln, newWorkbook, dataForObjListSheet);
-
-  })
+  });
 
   // writes the file and downloads it
   XLSX.writeFile(newWorkbook, `${fileName}.xlsx`);
 }
 
 function generateEntryForMainSheet(entitySchema, entryData = {}) {
-  let entryForSheet = entitySchema.scalarFields.reduce((header, sf) => {
+  let entryForSheet = entitySchema.scalarFieldsNames.reduce((header, sf) => {
     header[sf] = entryData[sf];
 
     return header;
   }, {});
 
   entryForSheet = entitySchema.embeddedObjsNames.reduce((header, eon) => {
-    entitySchema[eon].scalarFields.forEach(embeddedScalarFieldName => {
-      header[`${eon}.${embeddedScalarFieldName}`] = entryData[`${eon}`] ? entryData[`${eon}`][`${embeddedScalarFieldName}`] : undefined;
-    })
+    entitySchema[eon].scalarFieldsNames.forEach(embeddedScalarFieldName => {
+      header[`${eon}.${embeddedScalarFieldName}`] = entryData[`${eon}`]
+        ? entryData[`${eon}`][`${embeddedScalarFieldName}`]
+        : undefined;
+    });
 
     return header;
   }, entryForSheet);
@@ -217,23 +239,38 @@ function generateEntryForMainSheet(entitySchema, entryData = {}) {
   return entryForSheet;
 }
 
-function generateEntriesForScalarListSheet(entitySchema, scalarListName, mainEntityEntry = {}) {
-
-
+function generateEntriesForScalarListSheet(
+  entitySchema,
+  scalarListName,
+  mainEntityEntry = {}
+) {
   let entriesForSheet = [];
 
   if (mainEntityEntry[`${scalarListName}`]) {
-    entriesForSheet = mainEntityEntry[`${scalarListName}`].map((slEntry) =>
-      generateSingleEntryForScalarListSheet(entitySchema, scalarListName, mainEntityEntry, slEntry));
-
+    entriesForSheet = mainEntityEntry[`${scalarListName}`].map(slEntry =>
+      generateSingleEntryForScalarListSheet(
+        entitySchema,
+        scalarListName,
+        mainEntityEntry,
+        slEntry
+      )
+    );
   } else {
-    entriesForSheet[0] = generateSingleEntryForScalarListSheet(entitySchema, scalarListName);
+    entriesForSheet[0] = generateSingleEntryForScalarListSheet(
+      entitySchema,
+      scalarListName
+    );
   }
 
   return entriesForSheet;
 }
 
-function generateSingleEntryForScalarListSheet(entitySchema, scalarListName, mainEntityData = {}, scalarListEntry) {
+function generateSingleEntryForScalarListSheet(
+  entitySchema,
+  scalarListName,
+  mainEntityData = {},
+  scalarListEntry
+) {
   let slEntryForSheet = {};
 
   slEntryForSheet[`${entitySchema.entityName}Id`] = mainEntityData.id;
@@ -242,29 +279,46 @@ function generateSingleEntryForScalarListSheet(entitySchema, scalarListName, mai
   return slEntryForSheet;
 }
 
-function generateEntriesForObjListSheet(entitySchema, objListName, mainEntityEntry = {}) {
+function generateEntriesForObjListSheet(
+  entitySchema,
+  objListName,
+  mainEntityEntry = {}
+) {
   let entriesForSheet = [];
 
   if (mainEntityEntry[`${objListName}`]) {
-    entriesForSheet = mainEntityEntry[`${objListName}`].map((olEntry) =>
-      generateSingleEntryForObjListSheet(entitySchema, objListName, mainEntityEntry, olEntry));
-
+    entriesForSheet = mainEntityEntry[`${objListName}`].map(olEntry =>
+      generateSingleEntryForObjListSheet(
+        entitySchema,
+        objListName,
+        mainEntityEntry,
+        olEntry
+      )
+    );
   } else {
-    entriesForSheet[0] = generateSingleEntryForObjListSheet(entitySchema, objListName);
+    entriesForSheet[0] = generateSingleEntryForObjListSheet(
+      entitySchema,
+      objListName
+    );
   }
 
   return entriesForSheet;
 }
 
-function generateSingleEntryForObjListSheet(entitySchema, objListName, mainEntityData = {}, objListEntry = {}) {
+function generateSingleEntryForObjListSheet(
+  entitySchema,
+  objListName,
+  mainEntityData = {},
+  objListEntry = {}
+) {
   let olEntryForSheet = {};
 
   olEntryForSheet[`${entitySchema.entityName}Id`] = mainEntityData.id;
-  entitySchema[`${objListName}`].scalarFields.reduce((singleEntry, sf) => {
+  entitySchema[`${objListName}`].scalarFieldsNames.reduce((singleEntry, sf) => {
     singleEntry[`${sf}`] = objListEntry[`${sf}`];
 
     return singleEntry;
-  }, olEntryForSheet)
+  }, olEntryForSheet);
 
   return olEntryForSheet;
 }
