@@ -73,6 +73,7 @@ function FormLoader({ history }) {
     return () => {
       unListen();
     };
+    // eslint-disable-next-line
   }, [history]);
 
   if (!isOpen) {
