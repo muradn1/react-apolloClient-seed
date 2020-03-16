@@ -1,4 +1,4 @@
 export const RouterEnum = Object.freeze({
-    USERS: "/users",
-    OTHER: "/other" 
+    COMPLEX: "/complex",
+    SIMPLE: "/simple" 
 })

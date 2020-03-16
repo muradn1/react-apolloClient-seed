@@ -2,7 +2,7 @@ import React from 'react';
 import './App.css';
 
 //router
-import { BrowserRouter as Router, Route, Redirect } from "react-router-dom";
+import { BrowserRouter as Router, Route, Redirect } from 'react-router-dom';
 
 //spliter for sidebare
 import SplitPane from 'react-split-pane';
@@ -19,6 +19,9 @@ import { ApolloProvider } from '@apollo/react-hooks';
 import { InMemoryCache } from 'apollo-cache-inmemory';
 import FormLoader from './components/forms/form_loader/FormLoader';
 import { RouterEnum } from './enums/router-enum';
+import SimpleEntities from './components/simple-entities/SimpleEntities';
+import ComplexEntities from './components/complex-entities/ComplexEntities';
+import StartupMenu from './components/startup-menu/StartupMenu';
 
 
 
@@ -40,7 +43,6 @@ const sidebarStyles = {
 }
 
 const splitPaneStyle = {
-  direction: 'rtl',
   height: "100%"
 }
 
@@ -48,7 +50,7 @@ const splitPaneStyle = {
 function App() {
   return (
     <ApolloProvider client={client}>
-      <div className="app">
+      <div className="app" dir="rtl">
         <Router>
           <Header />
           <SplitPane
@@ -61,13 +63,14 @@ function App() {
             resizerStyle={resizerStyles}
             allowResize={false}
           >
-            <Sidebar />
+            {/* <Sidebar /> */}
             <div className="routes">
-              <Route path={RouterEnum.USERS} component={Users} />
-              <Route path={RouterEnum.OTHER} component={Other} />
-              <Redirect exact from="/" to={RouterEnum.USERS} />
+              <Route path={RouterEnum.SIMPLE} component={SimpleEntities} />
+              <Route path={RouterEnum.COMPLEX} component={ComplexEntities} />
+              <Redirect exact from="/" to={RouterEnum.SIMPLE} />
             </div>
           </SplitPane>
+          <StartupMenu />
           <FormLoader />
         </Router>
       </div>
