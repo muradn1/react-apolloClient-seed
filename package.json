@@ -31,7 +31,7 @@
     "react-scripts": "^3.3.0",
     "react-split-pane": "^0.1.87",
     "reactjs-popup": "^1.5.0",
-    "xlsx": "^0.15.3"
+    "xlsx": "^0.17.0"
   },
   "scripts": {
     "start": "react-scripts start",
